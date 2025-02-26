@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Калькулятор риска для криптовалюты</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .calculator {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .calculator h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .calculator label {
+      display: block;
+      margin-top: 15px;
+      text-align: left;
+      color: #555;
+    }
+    .calculator input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    .calculator button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .calculator button:hover {
+      background: #218838;
+    }
+    .results {
+      margin-top: 25px;
+      text-align: left;
+      opacity: 0;
+    }
+    .results.fadeIn {
+      animation: fadeIn 0.8s forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .results p {
+      margin: 8px 0;
+      font-size: 15px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <h1>Калькулятор риска</h1>
+    
+    <label for="deposit">Депозит ($):</label>
+    <input type="number" id="deposit" placeholder="Введите депозит" step="any" min="0" />
+    
+    <label for="riskPercent">Риск на сделку (%):</label>
+    <input type="number" id="riskPercent" placeholder="Например, 1" step="any" min="0" />
+    
+    <label for="leverage">Плечо (например, 3 для 1:3):</label>
+    <input type="number" id="leverage" placeholder="Введите плечо" step="any" min="1" />
+    
+    <label for="stopLoss">Стоп-лосс (%):</label>
+    <input type="number" id="stopLoss" placeholder="Введите % стоп-лосса" step="any" min="0" />
+    
+    <label for="profitPercent">Профит (%):</label>
+    <input type="number" id="profitPercent" placeholder="Введите % профита" step="any" min="0" />
+    
+    <button onclick="calculate()">Рассчитать</button>
+    
+    <div class="results" id="results"></div>
+  </div>
+
+  <!-- Подключаем библиотеку canvas-confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    function calculate() {
+      // Получаем значения из полей
+      const deposit = parseFloat(document.getElementById('deposit').value);
+      const riskPercent = parseFloat(document.getElementById('riskPercent').value);
+      const leverage = parseFloat(document.getElementById('leverage').value);
+      const stopLossPercent = parseFloat(document.getElementById('stopLoss').value);
+      const profitPercent = parseFloat(document.getElementById('profitPercent').value);
+      
+      // Проверка на корректность введённых данных
+      if (isNaN(deposit) || isNaN(riskPercent) || isNaN(leverage) || isNaN(stopLossPercent) || isNaN(profitPercent)) {
+        alert('Пожалуйста, заполните все поля корректными значениями.');
+        return;
+      }
+      
+      // Вычисляем риск в долларах (например, 1% от депозита)
+      const riskAmount = deposit * (riskPercent / 100);
+      
+      // Вычисляем размер позиции (номинал сделки)
+      // Если стоп-лосс = 0.5%, то позиция = риск в $ / 0.005
+      const positionSize = riskAmount / (stopLossPercent / 100);
+      
+      // Требуемая маржа = размер позиции / плечо
+      const marginRequired = positionSize / leverage;
+      
+      // Прибыль при успешной сделке = размер позиции * (% профита / 100)
+      const profitAmount = positionSize * (profitPercent / 100);
+      
+      // Итоговый депозит после успешной сделки и убыточной сделки
+      const depositAfterProfit = deposit + profitAmount;
+      const depositAfterLoss = deposit - riskAmount;
+      
+      // Формируем вывод результатов
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = `
+        <p><strong>Риск (в $):</strong> ${riskAmount.toFixed(2)}</p>
+        <p><strong>Размер позиции (в $):</strong> ${positionSize.toFixed(2)}</p>
+        <p><strong>Требуемая маржа (в $):</strong> ${marginRequired.toFixed(2)}</p>
+        <p><strong>Прибыль при успешной сделке (в $):</strong> ${profitAmount.toFixed(2)}</p>
+        <p><strong>Депозит после успешной сделки (в $):</strong> ${depositAfterProfit.toFixed(2)}</p>
+        <p><strong>Депозит после убыточной сделки (в $):</strong> ${depositAfterLoss.toFixed(2)}</p>
+      `;
+      
+      // Обеспечиваем повторное проигрывание анимации
+      resultsDiv.classList.remove('fadeIn');
+      void resultsDiv.offsetWidth;
+      resultsDiv.classList.add('fadeIn');
+      
+      // Запускаем эффект конфетти
+      confetti({
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+    }
+  </script>
+</body>
+</html>
